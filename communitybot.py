@@ -3,6 +3,12 @@ from discord.ext import commands
 from discord.ext.commands import Greedy
 from discord import User
 
+#open text file in read mode
+text_file = open("../bottoken.txt", "r")
+#read whole file to a string
+bottoken = text_file.read()
+#close file
+text_file.close()
 intents = discord.Intents(messages = True, guilds = True, reactions = True, members = True, presences = True)
 bot = commands.Bot(command_prefix = '-', intents = intents)
 bot.remove_command('help')
@@ -136,4 +142,4 @@ def rem(string, user):
     if not string: string = '\u200b'
     return string
 
-bot.run('ODA5ODgxMTg2NDgyNTIwMTU2.YCbioQ.wLeM-9UFAMwLUpCWoljAqOfHpkk')
+bot.run(bottoken)
