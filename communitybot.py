@@ -4,15 +4,19 @@ from discord.ext import commands
 from discord.ext.commands import Greedy
 from discord import User
 
+# url for zak img
+urlZak="https://static.wikia.nocookie.net/maplestory/images/f/f2/Monster_Zakum.png/revision/latest?cb=20140101121359&path-prefix=pl"
 #open text file in read mode
 text_file = open("../bottoken.txt", "r")
 #read whole file to a string
 bottoken = text_file.read()
 #close file
 text_file.close()
+
 intents = discord.Intents(messages = True, guilds = True, reactions = True, members = True, presences = True)
 bot = commands.Bot(command_prefix = '-', intents = intents)
-# load guild info
+
+# load server output ch configs
 guilddict = {}
 jsonfile = '../guilds.txt'
 try:
@@ -27,52 +31,44 @@ async def on_ready():
     print('Bot is ready.')
 
 # Initialize the channel that the user wants the boss run
-# sign up sheet sent to as well as initializing the channel that
-# the command will be expected to be received from on the discord server
-# to avoid the possibility of other users spamming the command.
+# sign up sheet sent to from now on
 @bot.command()
-async def init(ctx, bossid):
+async def output(ctx, out_id):
     exists = False
     for channel in ctx.guild.text_channels:
+        ch_name = channel.name
         channelid = channel.id 
-        if str(channelid) == bossid: exists = True
+        if str(channelid) == out_id: 
+            exists = True
+            break
     if not exists: return
     guildID = str(ctx.guild.id)
-    bot_chID = str(ctx.channel.id)
-    boss_chID = str(bossid)
-    guilddict[guildID] = (bot_chID, boss_chID)
+    guilddict[guildID] = out_id
+    await(ctx.send('Output has been set to: ' + ch_name))
     with open(jsonfile, 'w') as fp:
         json.dump(guilddict, fp)
 
 # Takes two integers for desired * of attackers and bishops 
 # followed by a "sentence in qoutes" as a description and creates
 # a reaction based sign up sheet for Zakum boss runs. 
-@bot.command()
-async def zak(ctx, *args):
+@bot.command(pass_context=True)
+async def zak(ctx, *, args):
     guild = ctx.guild
     guildID = str(ctx.guild.id)
     try:
-        bot_channel = guilddict[guildID][0]
-        boss_channel = guilddict[guildID][1]
+        out_id = guilddict[guildID]
     except KeyError:
-        await ctx.send(content="The bot and boss channel hasn't been initialized.")
+        await ctx.send(content="The output channel hasn't been set. Use `-output channelID`. Right click the channel you want to send to and copy the id.")
         return
-    if str(ctx.channel.id) != bot_channel: return
-    att_lim = args[0]
-    bsh_lim = args[1]
-    desc = args[2]
+    att_lim, bsh_lim, desc = args[0], args[2], args[3:]
     if not isDigit(att_lim) or not isDigit(bsh_lim): return
-    embed = discord.Embed(title="Zakum Runs", description = desc)
-    embed.set_thumbnail(url="https://static.wikia.nocookie.net/maplestory/images/f/f2/Monster_Zakum.png/revision/latest?cb=20140101121359&path-prefix=pl")
-    embed.add_field(name = "Attackers: 0/{} ⚔️".format(att_lim), value='\u200b', inline = True)
-    embed.add_field(name = "Bishops: 0/{} 🇨🇭".format(bsh_lim), value='\u200b', inline = True)
-    embed.add_field(name = 'Helms 🪖', value='\u200b', inline = True)
+    embed = makeEmbed("Zakum runs", urlZak, desc, "Attackers: 0/{} ⚔️".format(att_lim), "Bishops: 0/{} 🇨🇭".format(bsh_lim), 'Helms 🪖')
     embed.set_author(name=ctx.author.display_name + " is hosting", icon_url=ctx.author.avatar_url)
     boss_role = discord.utils.get(guild.roles, name="Bossing")
     helm_role = discord.utils.get(guild.roles, name="Zakum Helmet")
     roles = [boss_role, helm_role]
-    boss_channel = guild.get_channel(int(boss_channel))
-    message = await boss_channel.send(content="".join(role.mention for role in roles),embed=embed)
+    out_channel = guild.get_channel(int(out_id))
+    message = await out_channel.send(content="".join(role.mention for role in roles),embed=embed)
     await message.add_reaction('⚔️')
     await message.add_reaction('🇨🇭')
     await message.add_reaction('🪖')
@@ -82,27 +78,28 @@ async def zak(ctx, *args):
 async def on_reaction_add(reaction, user):
     if user.bot: return
     embeds = reaction.message.embeds
-    list = embeds[0].fields
-    sec_list = ""
-    sec_index = -1
-    fname = ""
+    field_list = embeds[0].fields
+    field_index = -1
+    field_name = ""
+    # these conditions check which reaction was made and updates the section that 
+    # corresponds to the reaction
     if reaction.emoji == '⚔️':
-        sec_index = 0
+        field_index = 0
         replace_indx = 11
-        fname = list[sec_index].name
-        fname = fname[:replace_indx] + str(int(fname[replace_indx]) + 1) + fname[replace_indx + 1:]
+        field_name = field_list[field_index].name
+        field_name = field_name[:replace_indx] + str(int(field_name[replace_indx]) + 1) + field_name[replace_indx + 1:]
     elif reaction.emoji == '🇨🇭':
-        sec_index = 1
+        field_index = 1
         replace_indx = 9
-        fname = list[sec_index].name
-        fname = fname[:replace_indx] + str(int(fname[replace_indx]) + 1) + fname[replace_indx + 1:]
+        field_name = field_list[field_index].name
+        field_name = field_name[:replace_indx] + str(int(field_name[replace_indx]) + 1) + field_name[replace_indx + 1:]
     elif reaction.emoji == '🪖':
-        sec_index = 2
-        fname = list[sec_index].name
-    else: return
-    sec_list = list[sec_index].value
-    sec_list = add(sec_list, user)
-    embeds[0].set_field_at(sec_index, name = fname, value=sec_list)
+        field_index = 2
+        field_name = field_list[field_index].name
+    else: return  
+    value_str = field_list[field_index].value
+    value_str = add(value_str, user)
+    embeds[0].set_field_at(field_index, name = field_name, value=value_str)
     await reaction.message.edit(embed = embeds[0])
 
 # handles removing a user from the list when they un-react
@@ -110,29 +107,38 @@ async def on_reaction_add(reaction, user):
 async def on_reaction_remove(reaction, user):
     if user.bot: return
     embeds = reaction.message.embeds
-    list = embeds[0].fields
-    sec_list = ""
-    sec_index = -1
-    fname = ""
+    field_list = embeds[0].fields
+    field_index = -1
+    field_name = ""
+    # these conditions check which reaction was made and updates the section that 
+    # corresponds to the reaction
     if reaction.emoji == '⚔️':
-        sec_index = 0
+        field_index = 0
         replace_indx = 11
-        fname = list[sec_index].name
-        fname = fname[:replace_indx] + str(int(fname[replace_indx]) - 1) + fname[replace_indx + 1:]
+        field_name = field_list[field_index].name
+        field_name = field_name[:replace_indx] + str(int(field_name[replace_indx]) - 1) + field_name[replace_indx + 1:]
     elif reaction.emoji == '🇨🇭':
-        sec_index = 1
+        field_index = 1
         replace_indx = 9
-        fname = list[sec_index].name
-        fname = fname[:replace_indx] + str(int(fname[replace_indx]) - 1) + fname[replace_indx + 1:]
+        field_name = field_list[field_index].name
+        field_name = field_name[:replace_indx] + str(int(field_name[replace_indx]) - 1) + field_name[replace_indx + 1:]
     elif reaction.emoji == '🪖':
-        sec_index = 2
-        fname = list[sec_index].name
+        field_index = 2
+        field_name = field_list[field_index].name
     else: return  
-    sec_list = list[sec_index].value
-    sec_list = rem(sec_list, user)
-    embeds[0].set_field_at(sec_index, name = fname, value=sec_list)
+    value_str = field_list[field_index].value
+    value_str = rem(value_str, user)
+    embeds[0].set_field_at(field_index, name = field_name, value=value_str)
     await reaction.message.edit(embed = embeds[0])
 
+# helper
+def makeEmbed(title, urlZak, desc, namefield1, namefield2, namefield3):
+    embed = discord.Embed(title=title, description = desc)
+    embed.set_thumbnail(url=urlZak)
+    embed.add_field(name = namefield1, value='\u200b', inline = True)
+    embed.add_field(name = namefield2, value='\u200b', inline = True)
+    embed.add_field(name = namefield3, value='\u200b', inline = True)
+    return embed
 # helper
 def add(string, user):
     if string == '\u200b': string = user.display_name
