@@ -125,17 +125,17 @@ async def add(ctx, *, args):
     msg = await channel.fetch_message(guilddict[guildID][4])
     embeds = msg.embeds
     col_list = embeds[0].fields
-    if category == 'attacker':
+    if category.lower() == 'attacker':
         index = 0
         sign_list[index].append(name)
         col_name = col_list[index].name
         col_name = ATTACKERS + "{}/{} ⚔️".format(str(len(sign_list[index])), col_name[13])
-    elif category == 'bishop':
+    elif category.lower() == 'bishop':
         index = 1
         sign_list[index].append(name)
         col_name = col_list[index].name
         col_name = BISHOPS + "{}/{} ⚔️".format(str(len(sign_list[index])), col_name[11])
-    elif category == 'buyer':
+    elif category.lower() == 'buyer':
         index = 2
         sign_list[index].append(name)
         col_name = col_list[index].name
@@ -159,19 +159,19 @@ async def remove(ctx, *, args):
     msg = await channel.fetch_message(guilddict[guildID][4])
     embeds = msg.embeds
     col_list = embeds[0].fields
-    if category == 'attacker':
+    if category.lower() == 'attacker':
         index = 0
         try: sign_list[index].remove(name)
         except ValueError: await(ctx.send('Could not find {} in the {} column.'.format(name, category)))
         col_name = col_list[index].name
         col_name = ATTACKERS + "{}/{} ⚔️".format(str(len(sign_list[index])), col_name[13])
-    elif category == 'bishop':
+    elif category.lower() == 'bishop':
         index = 1
         try: sign_list[index].remove(name)
         except ValueError: await(ctx.send('Could not find {} in the {} column.'.format(name, category)))
         col_name = col_list[index].name
         col_name = BISHOPS + "{}/{} ⚔️".format(str(len(sign_list[index])), col_name[11])
-    elif category == 'buyer':
+    elif category.lower() == 'buyer':
         index = 2
         try: sign_list[index].remove(name)
         except ValueError: await(ctx.send('Could not find {} in the {} column.'.format(name, category)))        
