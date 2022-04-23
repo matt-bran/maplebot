@@ -244,7 +244,8 @@ async def on_reaction_remove(reaction, user):
         col_name = BISHOPS + "{}/{} 🇨🇭".format(str(len(sign_list[role])), col_name[11])
     elif reaction.emoji == '🪖':
         role, tag = 2, 'Helms'
-        sign_list[role].remove(user.display_name)
+        try: sign_list[role].remove(user.display_name)
+        except ValueError: return
         col_name = col_list[role].name 
     else: return  
     if len(sign_list[role]) > 0: embeds[0].set_field_at(role, name=col_name, value='\n'.join(sign_list[role]))
