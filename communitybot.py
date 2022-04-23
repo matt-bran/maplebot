@@ -1,8 +1,10 @@
 import discord
 import json
+import time
 from discord.ext import commands
 from discord.ext.commands import Greedy
 from discord import User
+from threading import Thread
 
 # url for zak img
 urlZak="https://static.wikia.nocookie.net/maplestory/images/f/f2/Monster_Zakum.png/revision/latest?cb=20140101121359&path-prefix=pl"
@@ -32,13 +34,14 @@ except json.JSONDecodeError: pass
 @bot.event
 async def on_ready(): 
     await bot.change_presence(activity=discord.Game(name="-help"))
+    background_thread = Thread(target=write)
+    background_thread.start()
     print('Bot is ready.')
 
 @bot.command()
 async def greet(ctx):
     global guilddict
     guilddict[str(ctx.guild.id)] = ['', '', True, [], '']
-    write()
 
 @bot.command()
 async def help(ctx):
@@ -66,7 +69,6 @@ async def output(ctx, out_id):
     guildID = str(ctx.guild.id)
     guilddict[guildID][0] = out_id
     await(ctx.send('Output has been set to: ' + ch_name))
-    write()
 
 # Initialize the channel that the user wants the boss run
 # sign up sheet sent to from now on
@@ -76,7 +78,6 @@ async def input(ctx):
     guildID = str(ctx.guild.id)
     guilddict[guildID][1] = ctx.channel.id
     await(ctx.send('Input has been set. Logs will be sent to: {}'.format(ctx.channel.name)))
-    write()
 
 # Takes two integers for desired * of attackers and bishops 
 # followed by a "sentence in qoutes" as a description and creates
@@ -112,7 +113,6 @@ async def zak(ctx, *, args):
     sign_list.append(loot_list)
     guilddict[guildID][3] = sign_list
     guilddict[guildID][4] = recentMsg.id
-    write()
 
 @bot.command(passContext=True)
 async def add(ctx, *, args):
@@ -146,7 +146,6 @@ async def add(ctx, *, args):
     embeds[0].set_field_at(index, name=col_name, value='\n'.join(sign_list[index]))
     await msg.edit(embed = embeds[0])
     guilddict[guildID][3] = sign_list
-    write()
 
 @bot.command(passContext=True)
 async def remove(ctx, *, args):
@@ -184,7 +183,6 @@ async def remove(ctx, *, args):
     else: embeds[0].set_field_at(index, name=col_name, value='\u200b')
     await msg.edit(embed = embeds[0])
     guilddict[guildID][3] = sign_list 
-    write()
 
 # adds a user to the list when they react
 @bot.event
@@ -217,8 +215,7 @@ async def on_reaction_add(reaction, user):
     in_id = guilddict[str(reaction.message.guild.id)][1]
     await (reaction.message.guild.get_channel(in_id).send('[{}] {} has signed up for the Zak run'.format(tag, user.display_name)))
     guilddict[guildID][3] = sign_list 
-    write()
-#Attackers: 0/9
+
 # handles removing a user from the list when they un-react
 @bot.event
 async def on_reaction_remove(reaction, user):
@@ -254,7 +251,7 @@ async def on_reaction_remove(reaction, user):
     in_id = guilddict[str(reaction.message.guild.id)][1]
     await (reaction.message.guild.get_channel(in_id).send('[{}] {} has removed themselves from the Zak run'.format(tag, user.display_name)))
     guilddict[guildID][3] = sign_list
-    write()
+
 
 @bot.command()
 async def toggleMention(ctx):
@@ -269,7 +266,7 @@ async def toggleMention(ctx):
         toggle = True
         await (ctx.send('Mentions have been turned on.')) 
     guilddict[guildid][2] = toggle
-    write()
+
 
 # helper
 def makeEmbed(title, urlZak, desc, namefield1, namefield2, namefield3):
@@ -285,10 +282,13 @@ def isDigit(c):
     if (c>='0' and c<='9'): return True
     else: return False
 
+# background task to write server contents to file every 15 mins
 def write():
-    global guilddict
-    with open(jsonfile, 'w') as fp:
-        json.dump(guilddict, fp)
-    fp.close()
+    while True:
+        time.sleep(900)
+        global guilddict
+        with open(jsonfile, 'w') as fp:
+            json.dump(guilddict, fp)
+        fp.close()
 
 bot.run(bottoken)
