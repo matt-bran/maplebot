@@ -17,7 +17,7 @@ intents = discord.Intents(messages = True, guilds = True, reactions = True, memb
 bot = commands.Bot(command_prefix = '-', intents = intents)
 bot.remove_command('help')
 # DEFINE CONSTANTS
-ATTACKERS, BISHOPS, LOOTERS = 'Attackers: ', 'Bishops: ', 'Buyers 🪖'
+ATTACKERS, BISHOPS, LOOTERS = 'Attackers: ', 'Bishops: ', 'Helms 🪖'
 
 # load server output ch configs
 guilddict = {}
@@ -43,8 +43,8 @@ async def greet(ctx):
 @bot.command()
 async def help(ctx):
     help = []
-    help.append('-add <party role> <name entry> | adds the name entry to the column corresponding to the specified party role. The options are attacker, bishop, buyer.')
-    help.append('-remove <party role> <name entry> | removes the name entry to the column corresponding to the specified party role. The options are attacker, bishop, buyer.')
+    help.append('-add <party role> <name entry> | adds the name entry to the column corresponding to the specified party role. The options are attacker, bishop, helm.')
+    help.append('-remove <party role> <name entry> | removes the name entry to the column corresponding to the specified party role. The options are attacker, bishop, helm.')
     help.append('-input | Sets the current channel message was sent from as channel to receive sign-up log messages.')
     help.append('-output <bossing channel id> | sets the channel to send the bossing sheet to.')
     help.append('-toggleMention | toggles prescence of mentions in the sign up sheet. On by defualt.')
@@ -104,6 +104,7 @@ async def zak(ctx, *, args):
     else: recentMsg = await out_channel.send(embed=embed)
     await recentMsg.add_reaction('⚔️')
     await recentMsg.add_reaction('🇨🇭')
+    await recentMsg.add_reaction('🪖')
     att_list, bish_list, loot_list = [], [], []    
     sign_list = []
     sign_list.append(att_list)
@@ -135,7 +136,7 @@ async def add(ctx, *, args):
         sign_list[index].append(name)
         col_name = col_list[index].name
         col_name = BISHOPS + "{}/{} ⚔️".format(str(len(sign_list[index])), col_name[11])
-    elif category.lower() == 'buyer':
+    elif category.lower() == 'helm':
         index = 2
         sign_list[index].append(name)
         col_name = col_list[index].name
@@ -171,7 +172,7 @@ async def remove(ctx, *, args):
         except ValueError: await(ctx.send('Could not find {} in the {} column.'.format(name, category)))
         col_name = col_list[index].name
         col_name = BISHOPS + "{}/{} ⚔️".format(str(len(sign_list[index])), col_name[11])
-    elif category.lower() == 'buyer':
+    elif category.lower() == 'helm':
         index = 2
         try: sign_list[index].remove(name)
         except ValueError: await(ctx.send('Could not find {} in the {} column.'.format(name, category)))        
@@ -206,6 +207,10 @@ async def on_reaction_add(reaction, user):
         sign_list[role].append(user.display_name)
         col_name = col_list[role].name
         col_name = BISHOPS + "{}/{} 🇨🇭".format(str(len(sign_list[role])), col_name[11]) 
+    elif reaction.emoji == '🪖':
+        role, tag = 2, 'Helms'
+        sign_list[role].append(user.display_name)
+        col_name = col_list[role].name
     else: return  
     embeds[0].set_field_at(role, name=col_name, value='\n'.join(sign_list[role]))
     await reaction.message.edit(embed = embeds[0])
@@ -236,7 +241,11 @@ async def on_reaction_remove(reaction, user):
         try: sign_list[role].remove(user.display_name)
         except ValueError: return
         col_name = col_list[role].name
-        col_name = BISHOPS + "{}/{} 🇨🇭".format(str(len(sign_list[role])), col_name[11]) 
+        col_name = BISHOPS + "{}/{} 🇨🇭".format(str(len(sign_list[role])), col_name[11])
+    elif reaction.emoji == '🪖':
+        role, tag = 2, 'Helms'
+        sign_list[role].remove(user.display_name)
+        col_name = col_list[role].name 
     else: return  
     if len(sign_list[role]) > 0: embeds[0].set_field_at(role, name=col_name, value='\n'.join(sign_list[role]))
     else: embeds[0].set_field_at(role, name=col_name, value='\u200b')
